@@ -25,8 +25,16 @@ export default function AddBookmarkForm() {
       if (!error) {
         setUrl('')
         setTitle('')
-        // Force a custom event to trigger refetch
+        
+        // Trigger both custom event AND broadcast
         window.dispatchEvent(new Event('bookmark-added'))
+        
+        // Broadcast to other tabs via Supabase channel
+        const channel = supabase.channel('bookmark-sync')
+        await channel.send({
+          type: 'broadcast',
+          event: 'new-bookmark'
+        })
       }
     }
 
@@ -58,7 +66,7 @@ export default function AddBookmarkForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
+        className="w-full bg-blue-600  text-white py-2 rounded hover:bg-blue-700 disabled:bg-gray-400"
       >
         {loading ? 'Adding...' : 'Add Bookmark'}
       </button>

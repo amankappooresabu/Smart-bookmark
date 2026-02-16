@@ -28,48 +28,44 @@ export default function DashboardPage({ user }: Props) {
 
     fetchBookmarks()
 
+    // Custom events for same tab
     const handleBookmarkChange = () => fetchBookmarks()
     window.addEventListener('bookmark-added', handleBookmarkChange)
     window.addEventListener('bookmark-deleted', handleBookmarkChange)
 
-const channel = supabase
-  .channel('db-changes')
-  .on(
-    'postgres_changes',
-    {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'bookmarks'
-    },
-    (payload) => {
-      console.log('INSERT event:', payload)
-      setTimeout(() => {
+    // Broadcast channel for INSERT (cross-tab)
+    const broadcastChannel = supabase
+      .channel('bookmark-sync')
+      .on('broadcast', { event: 'new-bookmark' }, () => {
+        console.log('Broadcast received - refetching bookmarks')
         fetchBookmarks()
-      }, 100)
-    }
-  )
-  .on(
-    'postgres_changes',
-    {
-      event: 'DELETE',
-      schema: 'public',
-      table: 'bookmarks'
-    },
-    (payload) => {
-      console.log('DELETE event:', payload)
-      setTimeout(() => {
-        fetchBookmarks()
-      }, 100)
-    }
-  )
-  .subscribe((status) => {
-    console.log('Realtime status:', status)
-  })
+      })
+      .subscribe()
+
+    // DB changes for DELETE (works fine)
+    const dbChannel = supabase
+      .channel('db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'bookmarks'
+        },
+        () => {
+          console.log('DELETE event received')
+          setTimeout(() => {
+            fetchBookmarks()
+          }, 100)
+        }
+      )
+      .subscribe()
 
     return () => {
       window.removeEventListener('bookmark-added', handleBookmarkChange)
       window.removeEventListener('bookmark-deleted', handleBookmarkChange)
-      supabase.removeChannel(channel)
+      supabase.removeChannel(broadcastChannel)
+      supabase.removeChannel(dbChannel)
     }
   }, [supabase, user.id])
 

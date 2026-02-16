@@ -32,25 +32,39 @@ export default function DashboardPage({ user }: Props) {
     window.addEventListener('bookmark-added', handleBookmarkChange)
     window.addEventListener('bookmark-deleted', handleBookmarkChange)
 
-    const channel = supabase
-      .channel('public:bookmarks')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'bookmarks'
-        },
-        (payload) => {
-          console.log('Realtime event:', payload)
-          setTimeout(() => {
-            fetchBookmarks()
-          }, 100)
-        }
-      )
-      .subscribe((status) => {
-        console.log('Realtime status:', status)
-      })
+const channel = supabase
+  .channel('db-changes')
+  .on(
+    'postgres_changes',
+    {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'bookmarks'
+    },
+    (payload) => {
+      console.log('INSERT event:', payload)
+      setTimeout(() => {
+        fetchBookmarks()
+      }, 100)
+    }
+  )
+  .on(
+    'postgres_changes',
+    {
+      event: 'DELETE',
+      schema: 'public',
+      table: 'bookmarks'
+    },
+    (payload) => {
+      console.log('DELETE event:', payload)
+      setTimeout(() => {
+        fetchBookmarks()
+      }, 100)
+    }
+  )
+  .subscribe((status) => {
+    console.log('Realtime status:', status)
+  })
 
     return () => {
       window.removeEventListener('bookmark-added', handleBookmarkChange)

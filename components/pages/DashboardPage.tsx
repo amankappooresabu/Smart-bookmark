@@ -28,21 +28,17 @@ export default function DashboardPage({ user }: Props) {
 
     fetchBookmarks()
 
-    // Custom events for same tab
     const handleBookmarkChange = () => fetchBookmarks()
     window.addEventListener('bookmark-added', handleBookmarkChange)
     window.addEventListener('bookmark-deleted', handleBookmarkChange)
 
-    // Broadcast channel for INSERT (cross-tab)
     const broadcastChannel = supabase
       .channel('bookmark-sync')
       .on('broadcast', { event: 'new-bookmark' }, () => {
-        console.log('Broadcast received - refetching bookmarks')
         fetchBookmarks()
       })
       .subscribe()
 
-    // DB changes for DELETE (works fine)
     const dbChannel = supabase
       .channel('db-changes')
       .on(
@@ -53,7 +49,6 @@ export default function DashboardPage({ user }: Props) {
           table: 'bookmarks'
         },
         () => {
-          console.log('DELETE event received')
           setTimeout(() => {
             fetchBookmarks()
           }, 100)
